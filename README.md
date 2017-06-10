@@ -1,8 +1,8 @@
-![Zenpress](https://github.com/insionng/zenpress/raw/master/static/ico/zp.png)
+![Zenpress](https://github.com/insionng/zenpress/raw/master/public/favicon.png)
 
 Zenpress
 ===
-Zenpress是一个灵感来源于wordpress的cms项目，最终目标是实现一个简单和强大的Golang CMS系统网站，以内置lisp/lua/javascript/qlang等语言的纯GO VM实现来动态解析脚本，从而实现插件支持，作小许改动后可以应用为Blog、企业站、小说站、图站等多种类型网站..
+Zenpress是一个灵感来源于wordpress的cms项目，最终目标是实现一个简单和强大的Golang CMS系统网站，以内置Qlang语言的纯GO VM实现来动态解析脚本，从而实现插件支持，作小许改动后可以应用为Blog、企业站、小说站、图站等多种类型网站..
 
 --
 
@@ -19,6 +19,12 @@ Zenpress是一个灵感来源于wordpress的cms项目，最终目标是实现一
 --
 
 第四版（目前最新版）基于[Macross](https://github.com/insionng/macross)框架和[Xorm](https://github.com/go-xorm/xorm)、[TiDB](https://github.com/pingcap/tidb)数据库，于2016年12月5日开始重写。
+
+--
+
+第五版（0.0.3）基于[Makross](https://github.com/insionng/makross)框架和[Gorm](https://github.com/jinzhu/gorm)，于2017年06月10日开始重写。
+
+已实现插件机制及主题机制的支持！
 
 
 ##轻量级社区版本
