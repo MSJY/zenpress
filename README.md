@@ -27,6 +27,7 @@ Zenpress是一个灵感来源于wordpress的cms项目，最终目标是实现一
 已实现插件机制及主题机制的支持！
 
 
+
 ##轻量级社区版本
 
 [YouGam社区](http://www.yougam.com/) 支持PostgreSQL、MySQL、Sqlite3、Go/Leveldb、Boltdb、Tidb等等数据库
@@ -64,14 +65,7 @@ SudoChina社区 this site has been down.
 
 支付宝捐款地址： 赞助我写更多更好的开源项目 insion@live.com
 
-
-
-## 感谢捐助或定制本项目的用户 排名按时间顺序
-    右建华 5k,定制版
-    李新友 5k,定制版
-    孙 300,捐助者要求不公开全名
-    高栋 5k,定制版
-    吕雷 2k,购买源码
+![Donation](https://github.com/insionng/zenpress/raw/master/public/donation.jpg)
 
 
 
