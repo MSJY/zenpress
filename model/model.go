@@ -1,130 +1,104 @@
 package model
 
 import (
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
+	"github.com/jinzhu/gorm"
 
-	"github.com/go-xorm/core"
-	"github.com/go-xorm/xorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 
 	"errors"
 	"fmt"
 	"log"
-	"os"
-	"path"
 	"time"
 )
 
 var (
-	app       = "app"
-	Engine    *xorm.Engine
-	HasEngine bool
+	app         = "x"
+	Database    *gorm.DB
+	HasDatabase bool
 
-	DataType      = "mysql"
-	DBConnect     = "root:rootpass@/wp?charset=utf8"
-	DBTablePrefix = "wp_"
+	DataType = "sqlite"
+	//DatabaseConn        = "root:rootpass@/wp?charset=utf8"
+	//DatabaseConn = "./content/data/sqlite.db"
+	DatabaseConn        = "../content/data/sqlite_test.db"
+	DatabaseTablePrefix = "zp_"
 )
 
-func ConDb() (*xorm.Engine, error) {
+// Model base model definition, including fields `ID`, `CreatedAt`, `UpdatedAt`, `DeletedAt`, which could be embedded in your models
+//    type User struct {
+//      model.Model
+//    }
+type Model struct {
+	ID        uint64 `gorm:"primary_key"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time `sql:"index"`
+}
+
+func ConnDatabase() (*gorm.DB, error) {
 	switch {
-	case DataType == "memory":
-		return xorm.NewEngine("tidb", "memory://tidb/tidb")
-
-	case DataType == "goleveldb":
-		if DBConnect != "" {
-			return xorm.NewEngine("tidb", DBConnect)
-		}
-		return xorm.NewEngine("tidb", "goleveldb://"+app+"/data/tidb/tidb")
-
-	case DataType == "boltdb":
-		if DBConnect != "" {
-			return xorm.NewEngine("tidb", DBConnect)
-		}
-		return xorm.NewEngine("tidb", "boltdb://"+app+"/data/tidb/tidb")
 	case DataType == "sqlite":
-		if DBConnect != "" {
-			return xorm.NewEngine("sqlite3", DBConnect)
+		if DatabaseConn[:1] == "." {
+			fmt.Println("DatabaseConn>", DatabaseConn)
+			return gorm.Open("sqlite3", DatabaseConn)
 		}
-		return xorm.NewEngine("sqlite3", app+"/data/sqlite.db")
+		return gorm.Open("sqlite3", app+"/data/sqlite.db")
 
 	case DataType == "mysql":
-		return xorm.NewEngine("mysql", DBConnect)
-		//return xorm.NewEngine("mysql", "root:YouPass@/db?charset=utf8")
+		return gorm.Open("mysql", DatabaseConn)
 
 	case DataType == "postgres":
-		return xorm.NewEngine("postgres", DBConnect)
-		//return xorm.NewEngine("postgres", "user=postgres password=jn!@#$%^&* dbname=pgsql sslmode=disable")
-
-		// "user=postgres password=jn!@#$%^&* dbname=yougam sslmode=disable maxcons=10 persist=true"
-		//return xorm.NewEngine("postgres", "host=192.168.1.113 user=postgres password=jn!@#$%^&* dbname=yougam sslmode=disable")
-		//return xorm.NewEngine("postgres", "host=127.0.0.1 port=6432 user=postgres password=jn!@#$%^&* dbname=yougam sslmode=disable")
+		return gorm.Open("postgres", DatabaseConn)
 	}
-	return nil, errors.New("Unknown database type..")
+	return nil, errors.New("unknown database type.")
 }
 
-func SetEngine() (*xorm.Engine, error) {
+func SetDatabase(maxIdleConns, maxOpenConns int) (*gorm.DB, error) {
 	var _error error
-	if Engine, _error = ConDb(); _error != nil {
-		return nil, fmt.Errorf("Fail to connect to database: %s", _error.Error())
-	} else {
-		Engine.SetTableMapper(core.NewPrefixMapper(core.GonicMapper{}, DBTablePrefix))
-		Engine.SetColumnMapper(core.GonicMapper{})
-
-		cacher := xorm.NewLRUCacher(xorm.NewMemoryStore(), 10240)
-		Engine.SetDefaultCacher(cacher)
-
-		logDir := "logs"
-		if _, e := os.Open(logDir); e != nil {
-			os.MkdirAll(logDir, os.ModePerm)
-		}
-		
-		logPath := path.Join(logDir, "xorm.log")
-		f, err := os.Create(logPath)
-		if err != nil {
-			return Engine, fmt.Errorf("Fail to create xorm.log: %s", err.Error())
-		}
-
-		Engine.SetLogger(xorm.NewSimpleLogger(f))
-		Engine.ShowSQL(false)
-
-		if location, err := time.LoadLocation("Asia/Shanghai"); err == nil {
-			Engine.TZLocation = location
-		}
-
-		return Engine, err
+	if Database, _error = ConnDatabase(); _error != nil {
+		return nil, fmt.Errorf("Failed to connect database: %s,%s", _error.Error(), DatabaseConn)
 	}
+
+	//Database Connection Pool
+	Database.DB().SetMaxIdleConns(maxIdleConns)
+	Database.DB().SetMaxOpenConns(maxOpenConns)
+	Database.Debug().LogMode(true)
+	return Database, nil
 }
 
-func NewEngine() error {
+func NewDatabase(maxIdleConns, maxOpenConns int) error {
 	var _error error
-	Engine, _error = SetEngine()
+	Database, _error = SetDatabase(maxIdleConns, maxOpenConns)
 	return _error
 }
 
 func init() {
 
 	var _error error
-	if Engine, _error = SetEngine(); _error != nil {
+	if Database, _error = SetDatabase(10, 100); _error != nil {
 		log.Fatal("app.models.init() errors:", _error.Error())
 	}
 
-	if _error = createTables(Engine); _error != nil {
-		log.Fatal("Fail to creatTables errors:", _error.Error())
+	CreateTables(Database)
+
+	message()
+
+}
+
+func CreateTables(Database *gorm.DB) {
+	if DataType == "mysql" {
+		Database.Set("gorm:table_options", "ENGINE=InnoDB").AutoMigrate(&AppVersions{}, &Apps{}, &Commentmeta{}, &Comments{}, &Links{}, &Options{}, &Postmeta{}, &Posts{}, &RegistrationLog{}, &Signups{}, &Site{}, &Sitemeta{}, &TermRelationships{}, &TermTaxonomy{}, &Termmeta{}, &Terms{}, &Usermeta{}, &User{}, &Role{}, &Permission{}, &RolePermissions{})
+	} else {
+		Database.AutoMigrate(&AppVersions{}, &Apps{}, &Commentmeta{}, &Comments{}, &Links{}, &Options{}, &Postmeta{}, &Posts{}, &RegistrationLog{}, &Signups{}, &Site{}, &Sitemeta{}, &TermRelationships{}, &TermTaxonomy{}, &Termmeta{}, &Terms{}, &Usermeta{}, &User{}, &Role{}, &Permission{}, &RolePermissions{})
 	}
-
-	inits()
-
 }
 
 func Ping() error {
-	return Engine.Ping()
+	return Database.DB().Ping()
 }
 
-func createTables(Engine *xorm.Engine) error {
-	return Engine.Sync2(&BlogVersions{},&Blogs{},&Commentmeta{},&Comments{},&Links{},&Options{},&Postmeta{},&Posts{},&RegistrationLog{},&Signups{},&Site{},&Sitemeta{},&TermRelationships{},&TermTaxonomy{},&Termmeta{},&Terms{},&Usermeta{},&Users{})
-}
-
-func inits() {
+func message() {
 	fmt.Println("-----------------------------------------------------------")
-	fmt.Println("The app system has started!")
+	fmt.Println("The x system has started!")
 }
